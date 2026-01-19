@@ -127,3 +127,17 @@
     @apply font-sans;
   }
 }
+
+@keyframes last-seconds-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.last-seconds-pulse {
+  animation: last-seconds-pulse 0.9s ease-in-out infinite;
+}
