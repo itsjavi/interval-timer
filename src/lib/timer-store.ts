@@ -5,9 +5,24 @@ import type { TimerSettings, TimerStatus } from '@/lib/timer-types'
 import { defaultSettings } from '@/lib/timer-types'
 import { resolveAfterBreak, resolveAfterRunning } from '@/lib/timer-logic'
 
+function getInitialInterval(): number {
+  try {
+    const stored = localStorage.getItem('interval-timer-settings')
+    if (stored) {
+      const parsed = JSON.parse(stored) as { intervalSeconds?: number }
+      if (typeof parsed.intervalSeconds === 'number') {
+        return parsed.intervalSeconds
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return defaultSettings.intervalSeconds
+}
+
 export const statusAtom = atom<TimerStatus>('idle')
 export const pausedFromStatusAtom = atom<TimerStatus | null>(null)
-export const remainingTimeAtom = atom<number>(defaultSettings.intervalSeconds)
+export const remainingTimeAtom = atom<number>(getInitialInterval())
 export const currentRepetitionAtom = atom<number>(0)
 
 export const settingsAtom = atomWithStorage<TimerSettings>(

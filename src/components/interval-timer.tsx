@@ -138,16 +138,17 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
   const progress = totalTime > 0 ? ((totalTime - remainingTime) / totalTime) * 100 : 0
 
   const previousStatusRef = React.useRef(status)
-  const initialSyncDone = React.useRef(false)
+  const previousIntervalRef = React.useRef(settings.intervalSeconds)
 
-  // Sync remaining time with settings on initial load
+  // Sync remaining time with settings when idle/finished (skip if value hasn't changed)
   React.useEffect(() => {
-    if (initialSyncDone.current) {
+    if (previousIntervalRef.current === settings.intervalSeconds) {
       return
     }
+    previousIntervalRef.current = settings.intervalSeconds
+
     if (status === 'idle' || status === 'finished') {
       setRemainingTime(settings.intervalSeconds)
-      initialSyncDone.current = true
     }
   }, [settings.intervalSeconds, setRemainingTime, status])
 

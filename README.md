@@ -1,6 +1,8 @@
 # Interval Timer
 
-A simple, beautiful interval timer SPA for workouts or focus sessions. The app orchestrates time-based phases (delay → work → break) with sound cues, clear visual feedback, and predictable repetition behavior.
+A simple, beautiful interval timer SPA for workouts or focus sessions. The app orchestrates
+time-based phases (delay → work → break) with sound cues, clear visual feedback, and predictable
+repetition behavior.
 
 ## Features
 
@@ -14,16 +16,16 @@ A simple, beautiful interval timer SPA for workouts or focus sessions. The app o
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org) |
-| Build | [Vite](https://vite.dev) with React Compiler |
-| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
-| Components | [shadcn/ui](https://ui.shadcn.com) |
-| State | [Jotai](https://jotai.org) |
-| Audio | [Tone.js](https://tonejs.github.io) |
-| Icons | [Lucide React](https://lucide.dev) |
-| Deployment | GitHub Pages (static SPA) |
+| Layer      | Technology                                                                   |
+| ---------- | ---------------------------------------------------------------------------- |
+| Framework  | [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org) |
+| Build      | [Vite](https://vite.dev) with React Compiler                                 |
+| Styling    | [Tailwind CSS 4](https://tailwindcss.com)                                    |
+| Components | [shadcn/ui](https://ui.shadcn.com)                                           |
+| State      | [Jotai](https://jotai.org)                                                   |
+| Audio      | [Tone.js](https://tonejs.github.io)                                          |
+| Icons      | [Lucide React](https://lucide.dev)                                           |
+| Deployment | GitHub Pages (static SPA)                                                    |
 
 ## Getting Started
 
@@ -54,11 +56,13 @@ src/
 
 ## Documentation
 
-For detailed business logic, state machine behavior, audio rules, and UI feedback guidelines, see **[AGENTS.md](./AGENTS.md)**.
+For detailed business logic, state machine behavior, audio rules, and UI feedback guidelines, see
+**[AGENTS.md](./AGENTS.md)**.
 
 ## Deployment
 
-The app automatically builds and deploys to GitHub Pages via the workflow in `.github/workflows/gh-pages.yaml`. Every push to `main` triggers a new deployment.
+The app automatically builds and deploys to GitHub Pages via the workflow in
+`.github/workflows/gh-pages.yaml`. Every push to `main` triggers a new deployment.
 
 ## License
 

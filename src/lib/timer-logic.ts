@@ -24,10 +24,10 @@ export function isLastSeconds(status: TimerStatus, remainingTime: number) {
 
 export function getPhaseLabel(status: TimerStatus) {
   if (status === 'delay') {
-    return 'Delay'
+    return 'Get Ready'
   }
   if (status === 'running') {
-    return 'Interval'
+    return 'Focus'
   }
   if (status === 'break') {
     return 'Break'
