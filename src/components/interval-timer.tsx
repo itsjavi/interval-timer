@@ -194,6 +194,23 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
     }
   }, [remainingTime, status])
 
+  // Warn user before closing window if timer is active
+  React.useEffect(() => {
+    if (!isRunning && !isPaused) {
+      return
+    }
+
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [isRunning, isPaused])
+
   async function handleStart() {
     await ensureAudioReady()
     startTimer()
