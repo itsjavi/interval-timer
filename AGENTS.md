@@ -93,13 +93,10 @@ The app uses local storage to load/save all configuration settings.
 ### AUDIO LOGIC
 
 - Audio is purely event-based (no external files).
-- Only triggered during RUNNING phase.
-- Trigger pattern during last interval seconds:
-  - t = 3 → short beep
-  - t = 2 → short beep
-  - t = 1 → longer beep
-- No audio during breaks or delay.
-- Play another audio pattern when another interval starts (a quick "bee-beeep!")
+- Audio is generated using Tone.js.
+- Audio is triggered:
+  - 3 seconds before a delay/break/workout ends (one beep each second)
+  - on workout/break starts (a combination of notes)
 
 ### UI FEEDBACK RULES
 
