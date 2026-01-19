@@ -124,6 +124,7 @@
     @apply bg-background text-foreground font-sans;
   }
   html {
+    font-size: 18px;
     @apply font-sans;
   }
 }
@@ -134,10 +135,24 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.2);
+    transform: scale(1.05);
   }
 }
 
 .last-seconds-pulse {
-  animation: last-seconds-pulse 0.9s ease-in-out infinite;
+  animation: last-seconds-pulse 0.8s ease-in-out infinite;
+}
+
+/* Timer ring styling */
+.timer-ring circle {
+  transition:
+    stroke-dashoffset 0.3s ease-out,
+    stroke 0.3s ease-out;
+}
+
+/* Smooth height transitions for settings panel */
+@media (prefers-reduced-motion: reduce) {
+  .last-seconds-pulse {
+    animation: none;
+  }
 }

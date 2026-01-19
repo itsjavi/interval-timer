@@ -1,22 +1,93 @@
 import * as React from 'react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { PauseIcon, PlayIcon, RefreshCcwIcon, TimerIcon, Volume2Icon } from 'lucide-react'
+import { ChevronDownIcon, PauseIcon, PlayIcon, RotateCcwIcon, SettingsIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Field, FieldContent, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+
+type NumberInputProps = {
+  value: number
+  onChange: (value: number) => void
+  min?: number
+  disabled?: boolean
+  className?: string
+  variant?: 'default' | 'group'
+}
+
+function NumberInput({
+  value,
+  onChange,
+  min = 0,
+  disabled,
+  className,
+  variant = 'default',
+}: NumberInputProps) {
+  const [draft, setDraft] = React.useState(value.toString())
+  const [isFocused, setIsFocused] = React.useState(false)
+
+  // Sync draft with external value when not focused
+  React.useEffect(() => {
+    if (!isFocused) {
+      setDraft(value.toString())
+    }
+  }, [value, isFocused])
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value
+    const parsed = Number.parseInt(raw, 10)
+
+    // Trim leading zeros by using the parsed number as string
+    if (!Number.isNaN(parsed) && raw !== '') {
+      const clamped = Math.max(min, parsed)
+      setDraft(clamped.toString())
+      onChange(clamped)
+    } else {
+      setDraft(raw)
+      onChange(min)
+    }
+  }
+
+  function handleBlur() {
+    setIsFocused(false)
+    // Normalize display on blur
+    const parsed = Number.parseInt(draft, 10)
+    const finalValue = Number.isNaN(parsed) ? min : Math.max(min, parsed)
+    setDraft(finalValue.toString())
+  }
+
+  const groupStyles =
+    variant === 'group'
+      ? 'flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0 dark:bg-transparent'
+      : ''
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      value={draft}
+      disabled={disabled}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
+      onChange={handleChange}
+      data-slot={variant === 'group' ? 'input-group-control' : undefined}
+      className={cn(groupStyles, className)}
+    />
+  )
+}
 import { ensureAudioReady, playIntervalStart, playLongBeep, playShortBeep } from '@/lib/timer-audio'
-import { formatTimerSeconds, getPhaseLabel, isActiveStatus, isLastSeconds } from '@/lib/timer-logic'
+import {
+  calculateTotalTime,
+  formatTimerSeconds,
+  getPhaseLabel,
+  isActiveStatus,
+  isLastSeconds,
+} from '@/lib/timer-logic'
+import { defaultSettings } from '@/lib/timer-types'
 import {
   currentRepetitionAtom,
   pausedFromStatusAtom,
@@ -29,6 +100,7 @@ import {
   statusAtom,
   tickTimerAtom,
 } from '@/lib/timer-store'
+import { GithubIcon } from './icons'
 import { ThemeToggle } from './theme-toggle'
 
 export function IntervalTimer({ className, ...props }: React.ComponentProps<'div'>) {
@@ -44,12 +116,40 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
   const tickTimer = useSetAtom(tickTimerAtom)
   const setRemainingTime = useSetAtom(remainingTimeAtom)
 
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+
   const settingsLocked = status !== 'idle' && status !== 'finished'
   const showLastSeconds = isLastSeconds(status, remainingTime)
   const phaseLabel = getPhaseLabel(status)
   const repetitionLabel = settings.repetitions > 0 ? settings.repetitions.toString() : '∞'
+  const isRunning = isActiveStatus(status)
+  const canStart = status === 'idle' || status === 'finished'
+  const isPaused = status === 'paused'
+
+  // Calculate progress for the ring
+  const totalTime =
+    status === 'running'
+      ? settings.intervalSeconds
+      : status === 'break'
+        ? settings.breakSeconds
+        : status === 'delay'
+          ? settings.startDelaySeconds
+          : settings.intervalSeconds
+  const progress = totalTime > 0 ? ((totalTime - remainingTime) / totalTime) * 100 : 0
 
   const previousStatusRef = React.useRef(status)
+  const initialSyncDone = React.useRef(false)
+
+  // Sync remaining time with settings on initial load
+  React.useEffect(() => {
+    if (initialSyncDone.current) {
+      return
+    }
+    if (status === 'idle' || status === 'finished') {
+      setRemainingTime(settings.intervalSeconds)
+      initialSyncDone.current = true
+    }
+  }, [settings.intervalSeconds, setRemainingTime, status])
 
   React.useEffect(() => {
     if (!isActiveStatus(status)) {
@@ -104,6 +204,16 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
     resumeTimer()
   }
 
+  function handlePlayPause() {
+    if (canStart) {
+      void handleStart()
+    } else if (isPaused) {
+      void handleResume()
+    } else if (isRunning) {
+      pauseTimer()
+    }
+  }
+
   function updateSetting<K extends keyof typeof settings>(key: K, value: (typeof settings)[K]) {
     const nextSettings = { ...settings, [key]: value }
     setSettings(nextSettings)
@@ -113,211 +223,331 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
     }
   }
 
-  function parseNumber(value: string, min: number) {
-    const parsed = Number.parseInt(value, 10)
-    if (Number.isNaN(parsed)) {
-      return min
+  function resetToDefaults() {
+    localStorage.removeItem('interval-timer-settings')
+    setSettings(defaultSettings)
+    if (status === 'idle' || status === 'finished') {
+      setRemainingTime(defaultSettings.intervalSeconds)
     }
-    return Math.max(min, parsed)
   }
+
+  // Ring colors based on phase
+  const ringColor = showLastSeconds
+    ? 'stroke-amber-500'
+    : status === 'running'
+      ? 'stroke-primary'
+      : status === 'break'
+        ? 'stroke-sky-500'
+        : status === 'delay'
+          ? 'stroke-violet-500'
+          : 'stroke-muted-foreground/30'
+
+  const ringBgColor =
+    status === 'idle' || status === 'finished' ? 'stroke-muted/50' : 'stroke-muted-foreground/10'
 
   return (
     <div
-      className={cn(
-        'bg-background text-foreground flex min-h-screen w-full items-center justify-center px-4 py-10',
-        className,
-      )}
+      className={cn('bg-background text-foreground flex min-h-dvh w-full flex-col', className)}
       {...props}
     >
-      <div className={cn('flex w-full max-w-5xl flex-col gap-6')}>
-        <Card className={cn('border-border/70')}>
-          <CardHeader
-            className={cn('flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between')}
+      {/* Header */}
+      <header className={cn('flex items-center justify-between px-6 py-4')}>
+        <h1
+          className={cn(
+            'flex items-center gap-2 text-xl font-extrabold tracking-tight font-stretch-150%',
+          )}
+        >
+          <img
+            src="/interval-timer/logo-sm.png"
+            alt="Interval Timer"
+            className={cn('pointer-events-none size-8 select-none')}
+          />
+          Interval Timer
+        </h1>
+        <div className={cn('flex items-center gap-4')}>
+          <a
+            href="https://github.com/itsjavi/interval-timer"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn('hover:opacity-80')}
+            aria-label="View source on GitHub"
           >
-            <div className={cn('flex items-center gap-3')}>
-              <div
-                className={cn(
-                  'bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full',
-                )}
-              >
-                <TimerIcon className={cn('h-5 w-5')} />
-              </div>
-              <div>
-                <CardTitle className={cn('text-2xl')}>Interval Timer</CardTitle>
-                <CardDescription>Stay on pace with clear phase transitions.</CardDescription>
-              </div>
-            </div>
-            <div className={cn('flex items-center gap-4')}>
-              <div className={cn('text-muted-foreground flex items-center gap-2 text-sm')}>
-                <Volume2Icon className={cn('h-4 w-4')} />
-                Audio cues auto
-              </div>
-              <ThemeToggle />
-            </div>
-          </CardHeader>
-          <CardContent className={cn('flex flex-col gap-6')}>
-            <div className={cn('flex flex-col items-start gap-2')}>
-              <span
-                className={cn('text-sm font-medium tracking-wide uppercase', {
-                  'text-primary': status === 'running',
-                  'text-secondary-foreground': status === 'break',
-                  'text-muted-foreground': status === 'idle' || status === 'paused',
+            <GithubIcon className={cn('size-6')} />
+          </a>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      {/* Main timer area - takes remaining space */}
+      <main className={cn('flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-6')}>
+        {/* Phase label */}
+        <div
+          className={cn(
+            'text-center text-sm font-semibold tracking-widest uppercase transition-colors',
+            {
+              'text-primary': status === 'running' && !showLastSeconds,
+              'text-sky-500': status === 'break',
+              'text-violet-500': status === 'delay',
+              'text-muted-foreground': status === 'idle',
+              'text-amber-500': showLastSeconds,
+              'text-emerald-500': status === 'finished',
+              'text-orange-400': status === 'paused',
+            },
+          )}
+        >
+          {phaseLabel}
+          {status === 'paused' && pausedFromStatus ? ` · ${getPhaseLabel(pausedFromStatus)}` : ''}
+        </div>
+
+        {/* Timer ring */}
+        <div className={cn('relative')}>
+          <svg
+            className={cn('timer-ring -rotate-90')}
+            width="280"
+            height="280"
+            viewBox="0 0 280 280"
+          >
+            {/* Background ring */}
+            <circle
+              cx="140"
+              cy="140"
+              r="130"
+              fill="none"
+              strokeWidth="8"
+              className={cn(ringBgColor, 'transition-colors')}
+            />
+            {/* Progress ring */}
+            <circle
+              cx="140"
+              cy="140"
+              r="130"
+              fill="none"
+              strokeWidth="8"
+              strokeLinecap="round"
+              className={cn(ringColor, 'transition-all duration-300')}
+              strokeDasharray={2 * Math.PI * 130}
+              strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)}
+            />
+          </svg>
+
+          {/* Timer text in center */}
+          <div className={cn('absolute inset-0 flex flex-col items-center justify-center')}>
+            <span
+              className={cn(
+                'text-7xl font-bold tracking-tight tabular-nums transition-colors sm:text-8xl',
+                {
+                  'text-foreground': status === 'idle' || status === 'finished',
+                  'text-primary': status === 'running' && !showLastSeconds,
+                  'text-sky-500': status === 'break',
+                  'text-violet-500': status === 'delay',
                   'text-amber-500': showLastSeconds,
-                  'text-emerald-600': status === 'finished',
+                  'text-orange-400': status === 'paused',
                   'last-seconds-pulse': showLastSeconds,
-                })}
-              >
-                {phaseLabel}
-                {status === 'paused' && pausedFromStatus
-                  ? ` · ${getPhaseLabel(pausedFromStatus)}`
-                  : ''}
-              </span>
-              <div className={cn('flex items-baseline gap-3')}>
-                <span
-                  className={cn('text-5xl font-semibold tabular-nums sm:text-6xl', {
-                    'text-primary': status === 'running',
-                    'text-amber-500': showLastSeconds,
-                    'text-secondary-foreground': status === 'break',
-                    'last-seconds-pulse': showLastSeconds,
-                  })}
-                >
-                  {formatTimerSeconds(remainingTime)}
-                </span>
-                <span className={cn('text-muted-foreground text-sm')}>mm:ss</span>
-              </div>
-              <div className={cn('text-muted-foreground text-sm')}>
-                Completed {currentRepetition} / {repetitionLabel} intervals
-              </div>
-            </div>
-            <div className={cn('flex flex-wrap items-center gap-3')}>
-              <Button
-                onClick={() => void handleStart()}
-                disabled={status !== 'idle' && status !== 'finished'}
-                className={cn('min-w-[120px]')}
-              >
-                <PlayIcon className={cn('h-4 w-4')} />
-                Start
-              </Button>
-              {status === 'paused' ? (
-                <Button onClick={() => void handleResume()} variant="secondary">
-                  <PlayIcon className={cn('h-4 w-4')} />
-                  Resume
-                </Button>
-              ) : (
-                <Button onClick={pauseTimer} variant="secondary" disabled={!isActiveStatus(status)}>
-                  <PauseIcon className={cn('h-4 w-4')} />
-                  Pause
-                </Button>
+                },
               )}
-              <Button onClick={resetTimer} variant="outline">
-                <RefreshCcwIcon className={cn('h-4 w-4')} />
-                Reset
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            >
+              {formatTimerSeconds(remainingTime)}
+            </span>
+            <span className={cn('text-muted-foreground mt-1 text-sm')}>
+              {currentRepetition} / {repetitionLabel}
+            </span>
+          </div>
+        </div>
 
-        <Card className={cn('border-border/70')}>
-          <CardHeader>
-            <CardTitle className={cn('text-xl')}>Settings</CardTitle>
-            <CardDescription>Changes apply on reset while the timer is active.</CardDescription>
-          </CardHeader>
-          <CardContent className={cn('flex flex-col gap-6')}>
-            <FieldGroup>
-              <Field orientation="responsive" data-disabled={settingsLocked}>
-                <FieldLabel>Start delay</FieldLabel>
-                <FieldContent className={cn('flex flex-col gap-3')}>
-                  <div className={cn('flex items-center gap-3')}>
-                    <Switch
-                      checked={settings.startDelayEnabled}
+        {/* Total time (only for finite reps) */}
+        {settings.repetitions > 0 && (
+          <div className={cn('text-muted-foreground text-center text-sm')}>
+            Total: {formatTimerSeconds(calculateTotalTime(settings) ?? 0)}
+          </div>
+        )}
+
+        {/* Controls */}
+        <div className={cn('flex items-center gap-6')}>
+          {/* Reset button */}
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            onClick={resetTimer}
+            className={cn('h-14 w-14 rounded-full')}
+          >
+            <RotateCcwIcon className={cn('h-6 w-6')} />
+            <span className="sr-only">Reset</span>
+          </Button>
+
+          {/* Play/Pause button - the hero */}
+          <Button
+            onClick={handlePlayPause}
+            className={cn('h-20 w-20 rounded-full shadow-lg transition-transform active:scale-95', {
+              'bg-primary hover:bg-primary/90': canStart || isPaused,
+              'bg-orange-400 hover:bg-orange-500': isRunning && !isPaused,
+            })}
+          >
+            {isRunning && !isPaused ? (
+              <PauseIcon className={cn('size-8')} />
+            ) : (
+              <PlayIcon className={cn('size-7')} />
+            )}
+            <span className="sr-only">{isRunning && !isPaused ? 'Pause' : 'Start'}</span>
+          </Button>
+
+          {/* Settings toggle */}
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className={cn('h-14 w-14 rounded-full', {
+              'bg-muted': settingsOpen,
+            })}
+          >
+            <SettingsIcon className={cn('h-6 w-6')} />
+            <span className="sr-only">Settings</span>
+          </Button>
+        </div>
+      </main>
+
+      {/* Settings panel */}
+      <div
+        className={cn(
+          'bg-card border-border/50 overflow-hidden border-t transition-all duration-300',
+          {
+            'max-h-0 border-t-0': !settingsOpen,
+            'max-h-[50vh]': settingsOpen,
+          },
+        )}
+      >
+        <div className={cn('px-6 pt-7 pb-10')}>
+          <div className={cn('mb-3 flex items-center justify-between')}>
+            <h2 className={cn('text-sm font-semibold')}>Settings</h2>
+            <div className={cn('flex items-center gap-1')}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      onClick={resetToDefaults}
                       disabled={settingsLocked}
-                      onCheckedChange={(checked) =>
-                        updateSetting('startDelayEnabled', checked === true)
-                      }
-                    />
-                    <span className={cn('text-sm')}>
-                      {settings.startDelayEnabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={settings.startDelaySeconds}
-                    disabled={settingsLocked || !settings.startDelayEnabled}
-                    onChange={(event) =>
-                      updateSetting('startDelaySeconds', parseNumber(event.target.value, 0))
-                    }
-                  />
-                </FieldContent>
-              </Field>
+                      className={cn(
+                        'text-muted-foreground hover:text-foreground cursor-pointer rounded p-1 transition-colors',
+                        'disabled:cursor-not-allowed disabled:opacity-50',
+                      )}
+                    >
+                      <RotateCcwIcon className={cn('h-4 w-4')} />
+                    </button>
+                  }
+                />
+                <TooltipContent>Reset to default settings</TooltipContent>
+              </Tooltip>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className={cn('text-muted-foreground hover:text-foreground cursor-pointer p-1')}
+              >
+                <ChevronDownIcon className={cn('h-4 w-4')} />
+              </button>
+            </div>
+          </div>
 
-              <Separator />
+          {settingsLocked && (
+            <p className={cn('text-muted-foreground mb-3 text-xs')}>
+              Settings locked while active. Reset to edit.
+            </p>
+          )}
 
-              <Field orientation="responsive" data-disabled={settingsLocked}>
-                <FieldLabel>Interval</FieldLabel>
-                <FieldContent className={cn('flex flex-col gap-3')}>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={settings.intervalSeconds}
-                    disabled={settingsLocked}
-                    onChange={(event) =>
-                      updateSetting('intervalSeconds', parseNumber(event.target.value, 1))
-                    }
-                  />
-                  <FieldDescription>Seconds for each work interval.</FieldDescription>
-                </FieldContent>
-              </Field>
+          <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-4')}>
+            <Field data-disabled={settingsLocked}>
+              <FieldLabel className={cn('text-xs')}>Interval duration (s)</FieldLabel>
+              <FieldContent>
+                <NumberInput
+                  min={1}
+                  value={settings.intervalSeconds}
+                  disabled={settingsLocked}
+                  onChange={(v) => updateSetting('intervalSeconds', v)}
+                  className={cn('h-9')}
+                />
+              </FieldContent>
+            </Field>
 
-              <Field orientation="responsive" data-disabled={settingsLocked}>
-                <FieldLabel>Break</FieldLabel>
-                <FieldContent className={cn('flex flex-col gap-3')}>
-                  <Input
-                    type="number"
+            <Field data-disabled={settingsLocked}>
+              <FieldLabel className={cn('text-xs')}>
+                Break duration (s)
+                {settings.includeBreakAtEnd ? ' + final break' : ''}
+              </FieldLabel>
+              <FieldContent>
+                <InputGroup data-disabled={settingsLocked}>
+                  <NumberInput
                     min={0}
                     value={settings.breakSeconds}
                     disabled={settingsLocked}
-                    onChange={(event) =>
-                      updateSetting('breakSeconds', parseNumber(event.target.value, 0))
-                    }
+                    onChange={(v) => updateSetting('breakSeconds', v)}
+                    variant="group"
                   />
-                  <FieldDescription>Seconds for each recovery break.</FieldDescription>
-                </FieldContent>
-              </Field>
+                  <InputGroupAddon align="inline-end">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Checkbox
+                            checked={settings.includeBreakAtEnd}
+                            disabled={settingsLocked}
+                            onCheckedChange={(checked) =>
+                              updateSetting('includeBreakAtEnd', checked === true)
+                            }
+                            aria-label="Include break after final interval"
+                            className={cn('cursor-pointer')}
+                          />
+                        }
+                      />
+                      <TooltipContent>Include break after final interval</TooltipContent>
+                    </Tooltip>
+                  </InputGroupAddon>
+                </InputGroup>
+              </FieldContent>
+            </Field>
 
-              <Field orientation="responsive" data-disabled={settingsLocked}>
-                <FieldLabel>Repetitions</FieldLabel>
-                <FieldContent className={cn('flex flex-col gap-3')}>
-                  <Input
-                    type="number"
+            <Field data-disabled={settingsLocked}>
+              <FieldLabel className={cn('text-xs')}>Reps (0 = ∞)</FieldLabel>
+              <FieldContent>
+                <NumberInput
+                  min={0}
+                  value={settings.repetitions}
+                  disabled={settingsLocked}
+                  onChange={(v) => updateSetting('repetitions', v)}
+                  className={cn('h-9')}
+                />
+              </FieldContent>
+            </Field>
+
+            <Field data-disabled={settingsLocked}>
+              <FieldLabel className={cn('text-xs')}>Initial delay (s)</FieldLabel>
+              <FieldContent>
+                <InputGroup data-disabled={settingsLocked}>
+                  <NumberInput
                     min={0}
-                    value={settings.repetitions}
-                    disabled={settingsLocked}
-                    onChange={(event) =>
-                      updateSetting('repetitions', parseNumber(event.target.value, 0))
-                    }
+                    value={settings.startDelaySeconds}
+                    disabled={settingsLocked || !settings.startDelayEnabled}
+                    onChange={(v) => updateSetting('startDelaySeconds', v)}
+                    variant="group"
                   />
-                  <FieldDescription>0 runs indefinitely.</FieldDescription>
-                </FieldContent>
-              </Field>
-
-              <Separator />
-
-              <Field orientation="responsive" data-disabled={settingsLocked}>
-                <FieldLabel>Include break at end</FieldLabel>
-                <FieldContent>
-                  <Switch
-                    checked={settings.includeBreakAtEnd}
-                    disabled={settingsLocked}
-                    onCheckedChange={(checked) =>
-                      updateSetting('includeBreakAtEnd', checked === true)
-                    }
-                  />
-                </FieldContent>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+                  <InputGroupAddon align="inline-end">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Checkbox
+                            checked={settings.startDelayEnabled}
+                            disabled={settingsLocked}
+                            onCheckedChange={(checked) =>
+                              updateSetting('startDelayEnabled', checked === true)
+                            }
+                            aria-label="Enable countdown before first interval"
+                            className={cn('cursor-pointer')}
+                          />
+                        }
+                      />
+                      <TooltipContent>Enable countdown before first interval</TooltipContent>
+                    </Tooltip>
+                  </InputGroupAddon>
+                </InputGroup>
+              </FieldContent>
+            </Field>
+          </div>
+        </div>
       </div>
     </div>
   )

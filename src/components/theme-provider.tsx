@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -10,13 +10,15 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light')
+function getInitialTheme(): Theme {
+  if (typeof document === 'undefined') {
+    return 'light'
+  }
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+}
 
-  useLayoutEffect(() => {
-    const theme: Theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    setThemeState(theme)
-  }, [])
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
 
   const handleSetTheme = (newTheme: Theme) => {
     setThemeState(newTheme)

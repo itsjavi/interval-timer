@@ -1,31 +1,44 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interval Timer Online App – Custom Workout, HIIT and Focus Timer</title>
-  <script>
-    function _getTheme() {
-      if (typeof window === 'undefined') return 'light'
-      const stored = localStorage.getItem('theme')
-      if (stored === 'dark' || stored === 'light') return stored
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    (function () {
-      const theme = _getTheme();
-      console.log('theme', theme);
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo-sm.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interval Timer Online App – Custom Workout, HIIT and Focus Timer</title>
+    <script>
+      function _getTheme() {
+        if (typeof window === 'undefined') return 'light'
+        const stored = localStorage.getItem('theme')
+        if (stored === 'dark' || stored === 'light') return stored
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
       }
-    })();
-  </script>
-</head>
+      ;(function () {
+        const theme = _getTheme()
+        console.log('theme', theme)
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://ua.werkowl.com/js/pa-huJDgELYT7G3JT1Ibsdzi.js"></script>
+    <script>
+      ;((window.plausible =
+        window.plausible ||
+        function () {
+          ;(plausible.q = plausible.q || []).push(arguments)
+        }),
+        (plausible.init =
+          plausible.init ||
+          function (i) {
+            plausible.o = i || {}
+          }))
+      plausible.init()
+    </script>
+  </head>
 
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

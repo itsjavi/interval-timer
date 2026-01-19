@@ -1,11 +1,4 @@
-export const timerStatuses = [
-  'idle',
-  'delay',
-  'running',
-  'break',
-  'finished',
-  'paused',
-] as const
+export const timerStatuses = ['idle', 'delay', 'running', 'break', 'finished', 'paused'] as const
 
 export type TimerStatus = (typeof timerStatuses)[number]
 

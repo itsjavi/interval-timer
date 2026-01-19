@@ -65,3 +65,17 @@ export function resolveAfterBreak(settings: TimerSettings, currentRepetition: nu
 
   return { status: 'running', remainingTime: settings.intervalSeconds }
 }
+
+export function calculateTotalTime(settings: TimerSettings): number | null {
+  if (settings.repetitions <= 0) {
+    return null // Infinite
+  }
+
+  const reps = settings.repetitions
+  const intervalTotal = reps * settings.intervalSeconds
+  const breakCount = settings.includeBreakAtEnd ? reps : reps - 1
+  const breakTotal = Math.max(0, breakCount) * settings.breakSeconds
+  const delay = settings.startDelayEnabled ? settings.startDelaySeconds : 0
+
+  return delay + intervalTotal + breakTotal
+}

@@ -8,10 +8,10 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="text-fg-secondary hover:text-fg-primary transition-colors"
+      className="hover:opacity-80"
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
     </button>
   )
 }
