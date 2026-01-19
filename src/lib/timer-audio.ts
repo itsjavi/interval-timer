@@ -20,7 +20,7 @@ function getSynths(): SynthPair {
   }).toDestination()
 
   const longSynth = new Tone.Synth({
-    oscillator: { type: 'triangle' },
+    oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 },
     volume: -4,
   }).toDestination()
@@ -52,6 +52,18 @@ export function playIntervalStart() {
   const { shortSynth, longSynth } = getSynths()
   const now = Tone.now()
 
-  shortSynth.triggerAttackRelease('G5', '16n', now)
-  longSynth.triggerAttackRelease('C6', '8n', now + 0.12)
+  // Ascending energetic chime: E5 → G5 → C6
+  shortSynth.triggerAttackRelease('E5', '16n', now)
+  shortSynth.triggerAttackRelease('G5', '16n', now + 0.08)
+  longSynth.triggerAttackRelease('C6', '4n', now + 0.16)
+}
+
+export function playBreakStart() {
+  const { longSynth } = getSynths()
+  const now = Tone.now()
+
+  // Two-tone descending: A5 → D5
+  longSynth.triggerAttackRelease('C6', '16n', now)
+  longSynth.triggerAttackRelease('G5', '16n', now + 0.08)
+  longSynth.triggerAttackRelease('E5', '4n', now + 0.16)
 }

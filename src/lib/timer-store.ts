@@ -30,6 +30,29 @@ export const settingsAtom = atomWithStorage<TimerSettings>(
   defaultSettings,
 )
 
+function getInitialSoundEnabled(): boolean {
+  try {
+    const stored = localStorage.getItem('interval-timer-sound-enabled')
+    return stored !== null ? stored === 'true' : true
+  } catch {
+    return true
+  }
+}
+
+const soundEnabledBaseAtom = atom<boolean>(getInitialSoundEnabled())
+
+export const soundEnabledAtom = atom(
+  (get) => get(soundEnabledBaseAtom),
+  (_get, set, enabled: boolean) => {
+    set(soundEnabledBaseAtom, enabled)
+    try {
+      localStorage.setItem('interval-timer-sound-enabled', String(enabled))
+    } catch {
+      // Ignore storage errors
+    }
+  },
+)
+
 export const startTimerAtom = atom(null, (get, set) => {
   const settings = get(settingsAtom)
 

@@ -79,7 +79,13 @@ function NumberInput({
     />
   )
 }
-import { ensureAudioReady, playIntervalStart, playLongBeep, playShortBeep } from '@/lib/timer-audio'
+import {
+  ensureAudioReady,
+  playBreakStart,
+  playIntervalStart,
+  playLongBeep,
+  playShortBeep,
+} from '@/lib/timer-audio'
 import {
   calculateTotalTime,
   formatTimerSeconds,
@@ -96,11 +102,13 @@ import {
   resetTimerAtom,
   resumeTimerAtom,
   settingsAtom,
+  soundEnabledAtom,
   startTimerAtom,
   statusAtom,
   tickTimerAtom,
 } from '@/lib/timer-store'
 import { GithubIcon } from './icons'
+import { SoundToggle } from './sound-toggle'
 import { ThemeToggle } from './theme-toggle'
 
 export function IntervalTimer({ className, ...props }: React.ComponentProps<'div'>) {
@@ -109,6 +117,7 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
   const remainingTime = useAtomValue(remainingTimeAtom)
   const currentRepetition = useAtomValue(currentRepetitionAtom)
   const [settings, setSettings] = useAtom(settingsAtom)
+  const soundEnabled = useAtomValue(soundEnabledAtom)
   const startTimer = useSetAtom(startTimerAtom)
   const pauseTimer = useSetAtom(pauseTimerAtom)
   const resumeTimer = useSetAtom(resumeTimerAtom)
@@ -117,9 +126,11 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
   const setRemainingTime = useSetAtom(remainingTimeAtom)
 
   const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [showSecondsFormat, setShowSecondsFormat] = React.useState(false)
 
   const settingsLocked = status !== 'idle' && status !== 'finished'
   const showLastSeconds = isLastSeconds(status, remainingTime)
+  const canShowSeconds = remainingTime < 9999
   const phaseLabel = getPhaseLabel(status)
   const repetitionLabel = settings.repetitions > 0 ? settings.repetitions.toString() : '∞'
   const isRunning = isActiveStatus(status)
@@ -167,22 +178,29 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
   }, [status, tickTimer])
 
   React.useEffect(() => {
-    if (status !== 'running') {
-      previousStatusRef.current = status
-      return
-    }
-
     const wasPaused = previousStatusRef.current === 'paused'
 
-    if (remainingTime === settings.intervalSeconds && !wasPaused) {
-      playIntervalStart()
+    if (soundEnabled && status === 'running') {
+      if (remainingTime === settings.intervalSeconds && !wasPaused) {
+        playIntervalStart()
+      }
+    }
+
+    if (soundEnabled && status === 'break') {
+      if (remainingTime === settings.breakSeconds && !wasPaused) {
+        playBreakStart()
+      }
     }
 
     previousStatusRef.current = status
-  }, [remainingTime, settings.intervalSeconds, status])
+  }, [remainingTime, settings.intervalSeconds, settings.breakSeconds, status, soundEnabled])
 
   React.useEffect(() => {
-    if (status !== 'running') {
+    if (!soundEnabled) {
+      return
+    }
+
+    if (status !== 'running' && status !== 'delay' && status !== 'break') {
       return
     }
 
@@ -193,7 +211,7 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
     if (remainingTime === 1) {
       playLongBeep()
     }
-  }, [remainingTime, status])
+  }, [remainingTime, status, soundEnabled])
 
   // Warn user before closing window if timer is active
   React.useEffect(() => {
@@ -282,7 +300,7 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
           />
           Interval Timer
         </h1>
-        <div className={cn('flex items-center gap-4')}>
+        <div className={cn('flex items-center gap-6')}>
           <a
             href="https://github.com/itsjavi/interval-timer"
             target="_blank"
@@ -292,6 +310,7 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
           >
             <GithubIcon className={cn('size-6')} />
           </a>
+          <SoundToggle />
           <ThemeToggle />
         </div>
       </header>
@@ -350,9 +369,12 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
 
           {/* Timer text in center */}
           <div className={cn('absolute inset-0 flex flex-col items-center justify-center')}>
-            <span
+            <button
+              type="button"
+              onClick={() => canShowSeconds && setShowSecondsFormat((v) => !v)}
               className={cn(
                 'text-7xl font-bold tracking-tight tabular-nums transition-colors sm:text-8xl',
+                'cursor-pointer bg-transparent select-none',
                 {
                   'text-foreground': status === 'idle' || status === 'finished',
                   'text-primary': status === 'running' && !showLastSeconds,
@@ -364,8 +386,15 @@ export function IntervalTimer({ className, ...props }: React.ComponentProps<'div
                 },
               )}
             >
-              {formatTimerSeconds(remainingTime)}
-            </span>
+              {showSecondsFormat && canShowSeconds ? (
+                <>
+                  {remainingTime}
+                  <span className={cn('text-4xl')}>s</span>
+                </>
+              ) : (
+                formatTimerSeconds(remainingTime)
+              )}
+            </button>
             <span className={cn('text-muted-foreground mt-1 text-sm')}>
               {currentRepetition} / {repetitionLabel}
             </span>
