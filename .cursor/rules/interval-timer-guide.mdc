@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+description: Interval timer app rules reference
+---
+
+# Interval Timer SPA Rules
+
+Source of truth: [AGENTS.md](mdc:AGENTS.md).
+
+Follow the business logic, state machine, UI feedback, and audio rules there.
