@@ -1,0 +1,36 @@
+{
+  "theme_color": "#09090b",
+  "background_color": "#09090b",
+  "icons": [
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "icon512_maskable.png",
+      "type": "image/png"
+    },
+    { "purpose": "any", "sizes": "512x512", "src": "icon512_rounded.png", "type": "image/png" }
+  ],
+  "orientation": "any",
+  "display": "standalone",
+  "dir": "auto",
+  "lang": "en-US",
+  "name": "Interval Timer",
+  "short_name": "IntervalTimmer",
+  "start_url": "/interval-timer/",
+  "screenshots": [
+    {
+      "src": "/interval-timer/screenshots/mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Interval Timer"
+    },
+    {
+      "src": "/interval-timer/screenshots/desktop.png",
+      "sizes": "2560x1440",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Interval Timer"
+    }
+  ]
+}
