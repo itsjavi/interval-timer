@@ -1,84 +1,65 @@
-# React + TypeScript + Vite
+# Interval Timer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple, beautiful interval timer SPA for workouts or focus sessions. The app orchestrates time-based phases (delay → work → break) with sound cues, clear visual feedback, and predictable repetition behavior.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react)
-  uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in
-  [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc)
-  uses [SWC](https://swc.rs/) for Fast Refresh
+- Configurable work intervals and break periods
+- Optional start delay countdown
+- Infinite or fixed repetition modes
+- Audio cues during countdown (synthesized, no external files)
+- Mobile-first responsive design with large tap targets
+- Settings persistence via local storage
+- Dark/light theme support
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is enabled on this template. See
-[this documentation](https://react.dev/learn/react-compiler) for more information.
+| Layer | Technology |
+|-------|------------|
+| Framework | [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org) |
+| Build | [Vite](https://vite.dev) with React Compiler |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
+| Components | [shadcn/ui](https://ui.shadcn.com) |
+| State | [Jotai](https://jotai.org) |
+| Audio | [Tone.js](https://tonejs.github.io) |
+| Icons | [Lucide React](https://lucide.dev) |
+| Deployment | GitHub Pages (static SPA) |
 
-Note: This will impact Vite dev & build performances.
+## Getting Started
 
-## Expanding the ESLint configuration
+```bash
+# Install dependencies
+pnpm install
 
-If you are developing a production application, we recommend updating the configuration to enable
-type-aware lint rules:
+# Start development server
+pnpm dev
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Build for production
+pnpm build
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build
+pnpm preview
 ```
 
-You can also install
-[eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x)
-and
-[eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom)
-for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── components/      # React components
+│   └── ui/          # shadcn/ui primitives
+├── lib/             # Timer logic, state, and utilities
+├── main.tsx         # App entry point
+└── styles.css       # Global styles (Tailwind)
+```
+
+## Documentation
+
+For detailed business logic, state machine behavior, audio rules, and UI feedback guidelines, see **[AGENTS.md](./AGENTS.md)**.
+
+## Deployment
+
+The app automatically builds and deploys to GitHub Pages via the workflow in `.github/workflows/gh-pages.yaml`. Every push to `main` triggers a new deployment.
+
+## License
+
+MIT
